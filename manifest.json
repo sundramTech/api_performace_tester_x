@@ -1,0 +1,21 @@
+{
+  "manifest_version": 3,
+  "name": "API Performance Tester",
+  "version": "1.0",
+  "description": "Detect API calls and run performance tests (Load, Spike, Stress) on selected endpoints.",
+  "permissions": [
+    "webRequest",
+    "storage",
+    "activeTab"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "devtools_page": "devtools.html",
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "icons": {
+    "128": "icons/icon128.png"
+  }
+} 
