@@ -2,7 +2,7 @@
 
 // Create the panel
 chrome.devtools.panels.create(
-  "API Performance Tester",
+  "Fcuk API",
   "icons/icon128.png",
   "panel.html",
   function(panel) {
