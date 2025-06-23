@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "API Performance Tester",
+  "name": "Fcuk API",
   "version": "1.0",
   "description": "Detect API calls and run performance tests (Load, Spike, Stress) on selected endpoints.",
   "permissions": [

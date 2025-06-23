@@ -46,7 +46,7 @@ function renderAPIList() {
 }
 
 document.getElementById('root').innerHTML = `
-  <h1 class='text-xl font-bold mb-4'>API Performance Tester</h1>
+  <h1 class='text-xl font-bold mb-4'>Fcuk API</h1>
   <div class='mb-2 flex gap-2'>
     <label class='flex items-center gap-1 text-sm'>VUs
       <input id='vus-input' type='number' min='1' value='5' class='w-16 px-1 py-0.5 border rounded'/>
