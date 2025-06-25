@@ -17,11 +17,7 @@ function renderAPIList() {
           <span class="font-mono text-xs">[${api.method}]</span> <span class="break-all">${api.url}</span>
         </label>
       </div>
-      ${api.method === 'POST' && api.postData?.text ? `
-        <div id="post-data-${idx}" class="hidden ml-6 mt-2 border-l-2 border-gray-200 pl-4">
-          ${createJsonInputs(JSON.parse(api.postData.text), `post-body-${idx}`)}
-        </div>
-      ` : ''}
+      ${renderPostBody(api, idx)}
     </div>
   `).join('');
   // Add event listeners for checkboxes
@@ -119,8 +115,19 @@ export default function () {
       const api = capturedAPIs[idx];
       let postBody = 'null';
       if (api.method === 'POST' && api.postData?.text) {
-        const jsonData = reconstructJsonFromInputs(JSON.parse(api.postData.text), `post-body-${idx}`);
-        postBody = `JSON.stringify(${JSON.stringify(jsonData)})`;
+          if (api.postData.mimeType === 'application/json') {
+              try {
+                  const originalJson = JSON.parse(api.postData.text);
+                  const jsonData = reconstructJsonFromInputs(originalJson, `post-body-${idx}`);
+                  postBody = `JSON.stringify(${JSON.stringify(jsonData)})`;
+              } catch (e) {
+                  // Fallback for malformed JSON
+                  postBody = JSON.stringify(api.postData.text);
+              }
+          } else {
+              // For non-JSON, send the original body as a string literal
+              postBody = JSON.stringify(api.postData.text);
+          }
       }
       const k6Script = generateK6Script(api, vus, duration, postBody);
       // Send to local k6 runner
@@ -136,17 +143,23 @@ export default function () {
     // Show results
     testResultsDiv.innerHTML = results.map(({ api, summary }) => {
       const metrics = summary?.metrics || {};
-      const checks = metrics.checks;
-      const successRate = (checks && checks.count > 0)
-        ? ((checks.passes / checks.count) * 100).toFixed(1) + '%'
+      
+      const reqs = metrics.http_reqs?.count ?? 0;
+      const failedReqs = metrics.http_req_failed?.count ?? 0;
+      
+      const successRate = reqs > 0
+        ? (((reqs - failedReqs) / reqs) * 100).toFixed(1) + '%'
         : 'N/A';
+        
+      const errors = failedReqs;
+
       return `
         <div class="mb-4 p-2 border rounded">
           <div class="font-mono text-xs mb-1 truncate">[${api.method}] ${api.url}</div>
-          <div class="text-sm">Requests: ${metrics.http_reqs?.count ?? '-'}</div>
+          <div class="text-sm">Requests: ${reqs}</div>
           <div class="text-sm">Success Rate: ${successRate}</div>
           <div class="text-sm">Avg Duration: ${metrics.http_req_duration ? metrics.http_req_duration.avg.toFixed(2) + 'ms' : '-'}</div>
-          <div class="text-sm text-red-600">Errors: ${checks && typeof checks.fails === 'number' ? checks.fails : '-'}</div>
+          <div class="text-sm text-red-600">Errors: ${errors}</div>
           <details class="mt-2"><summary class="cursor-pointer text-xs text-gray-500">Raw k6 summary</summary><pre class="text-xs bg-gray-100 p-2 rounded">${JSON.stringify(summary, null, 2)}</pre></details>
         </div>
       `;
@@ -168,23 +181,6 @@ document.getElementById('clear-test').addEventListener('click', () => {
   renderAPIList();
   // Disable run button
   document.getElementById('run-test').disabled = true;
-});
-
-chrome.devtools.network.onRequestFinished.addListener(function(request) {
-  if (request.request && (request.request.url.startsWith('http') || request.request.url.startsWith('https'))) {
-    // Filter XHR/fetch
-    if (request.type === 'xhr' || request.type === 'fetch') {
-      chrome.runtime.sendMessage({
-        type: 'API_CAPTURED',
-        api: {
-          url: request.request.url,
-          method: request.request.method,
-          headers: request.request.headers,
-          postData: request.request.postData
-        }
-      });
-    }
-  }
 });
 
 function createJsonInputs(json, prefix) {
@@ -265,4 +261,29 @@ function reconstructJsonFromInputs(originalJson, prefix) {
     }
   }
   return result;
+}
+
+function renderPostBody(api, idx) {
+    if (!(api.method === 'POST' && api.postData?.text)) {
+        return '';
+    }
+
+    if (api.postData.mimeType === 'application/json') {
+        try {
+            const jsonData = JSON.parse(api.postData.text);
+            return `
+                <div id="post-data-${idx}" class="hidden ml-6 mt-2 border-l-2 border-gray-200 pl-4">
+                    ${createJsonInputs(jsonData, `post-body-${idx}`)}
+                </div>`;
+        } catch (e) {
+            console.warn(`Failed to parse supposedly JSON body for ${api.url}. Displaying as text.`, e);
+        }
+    }
+    
+    // Fallback for non-JSON or failed-to-parse JSON
+    return `
+        <div id="post-data-${idx}" class="hidden ml-6 mt-2">
+            <label for="post-body-${idx}" class="text-sm font-medium text-gray-700">Request Body (${api.postData.mimeType || 'text/plain'}):</label>
+            <textarea id="post-body-${idx}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm bg-gray-100" rows="3" readonly>${api.postData.text}</textarea>
+        </div>`;
 }
