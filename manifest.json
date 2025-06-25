@@ -1,20 +1,9 @@
 {
   "manifest_version": 3,
   "name": "Fcuk API",
-  "version": "1.0",
-  "description": "Detect API calls and run performance tests (Load, Spike, Stress) on selected endpoints.",
-  "permissions": [
-    "webRequest",
-    "storage",
-    "activeTab"
-  ],
-  "background": {
-    "service_worker": "background.js"
-  },
+  "version": "1.0.1",
+  "description": "Effortless, real-world API testing and load testing—right inside DevTools.",
   "devtools_page": "devtools.html",
-  "action": {
-    "default_popup": "popup.html"
-  },
   "icons": {
     "128": "icons/icon128.png"
   }
